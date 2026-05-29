@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  game-server:
+    build:
+      context: ..
+      dockerfile: apps/game-server/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: '3001'
+      HOST: '0.0.0.0'
+      CORS_ORIGIN: 'http://localhost:3000'
+      MIN_PLAYERS: '4'
+      MAX_PLAYERS: '8'
+      LOG_LEVEL: 'info'
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      NEXT_PUBLIC_GAME_SERVER_URL: 'http://game-server:3001'
+      NEXT_PUBLIC_GAME_SERVER_WS: 'ws://game-server:3001'
+    depends_on:
+      - game-server
+    restart: unless-stopped
+
+# Optional: Add Redis and Postgres when ready to persist data
+# redis:
+#   image: redis:7-alpine
+#   ports:
+#     - '6379:6379'
+#
+# postgres:
+#   image: postgres:16-alpine
+#   environment:
+#     POSTGRES_DB: mafia_ai
+#     POSTGRES_USER: mafia
+#     POSTGRES_PASSWORD: secret
+#   ports:
+#     - '5432:5432'
+#   volumes:
+#     - postgres_data:/var/lib/postgresql/data
+
+# volumes:
+#   postgres_data:

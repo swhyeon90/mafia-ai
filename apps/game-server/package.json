@@ -1,0 +1,30 @@
+{
+  "name": "@mafia-ai/game-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mafia-ai/shared-types": "workspace:*",
+    "@mafia-ai/event-schema": "workspace:*",
+    "@mafia-ai/game-engine": "workspace:*",
+    "fastify": "^4.28.0",
+    "@fastify/cors": "^9.0.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8",
+    "uuid": "^9.0.1",
+    "pino": "^9.2.0",
+    "pino-pretty": "^11.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.0",
+    "@types/ws": "^8.5.10",
+    "@types/uuid": "^9.0.8",
+    "tsx": "^4.15.0"
+  }
+}
