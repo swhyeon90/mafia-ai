@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@mafia-ai/shared-types": "workspace:*",
-    "@anthropic-ai/sdk": "^0.27.0"
+    "@anthropic-ai/sdk": "^0.27.0",
+    "openai": "^4.68.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

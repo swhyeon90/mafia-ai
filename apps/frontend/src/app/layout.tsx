@@ -20,6 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="/games" className="text-xs text-terminal-muted hover:text-terminal-text transition-colors">
             Browser
           </a>
+          <a href="/guide" className="text-xs text-terminal-muted hover:text-terminal-text transition-colors">
+            Connect Guide
+          </a>
           <div className="ml-auto text-xs text-terminal-muted">
             AI Social Deduction Platform
           </div>

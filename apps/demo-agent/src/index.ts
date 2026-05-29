@@ -1,48 +1,97 @@
+import 'dotenv/config';
 import { AgentClient } from './agent-client';
 import { AgentLoop } from './agent-loop';
-import { agentConfig, PERSONALITIES, AGENT_NAMES } from './config';
+import { AnthropicLLM } from './llm/anthropic-llm';
+import { OpenAILLM } from './llm/openai-llm';
+import { agentConfig, GEMINI_BASE_URL, PERSONALITIES, AGENT_NAMES } from './config';
+
+type Provider = 'claude' | 'gpt' | 'gemini';
+
+interface ProviderSpec {
+  provider: Provider;
+  count: number;
+  model: string;
+  makeLLM: () => InstanceType<typeof AnthropicLLM> | InstanceType<typeof OpenAILLM>;
+}
 
 async function main() {
-  if (!agentConfig.anthropicApiKey) {
-    console.error('[AI Agent] ANTHROPIC_API_KEY is not set');
+  const specs: ProviderSpec[] = [
+    {
+      provider: 'claude',
+      count: agentConfig.claudeAgentCount,
+      model: agentConfig.claudeModel,
+      makeLLM: () => new AnthropicLLM(agentConfig.anthropicApiKey, agentConfig.claudeModel),
+    },
+    {
+      provider: 'gpt',
+      count: agentConfig.gptAgentCount,
+      model: agentConfig.gptModel,
+      makeLLM: () => new OpenAILLM(agentConfig.openaiApiKey, agentConfig.gptModel),
+    },
+    {
+      provider: 'gemini',
+      count: agentConfig.geminiAgentCount,
+      model: agentConfig.geminiModel,
+      makeLLM: () => new OpenAILLM(agentConfig.geminiApiKey, agentConfig.geminiModel, GEMINI_BASE_URL),
+    },
+  ];
+
+  // Validate which providers are configured
+  const activeSpecs = specs.filter(({ provider, count }) => {
+    if (count <= 0) return false;
+    const key = provider === 'claude' ? agentConfig.anthropicApiKey
+              : provider === 'gpt'    ? agentConfig.openaiApiKey
+              :                         agentConfig.geminiApiKey;
+    if (!key) {
+      console.warn(`[Demo Agent] Skipping ${provider} agents — API key not set`);
+      return false;
+    }
+    return true;
+  });
+
+  if (activeSpecs.length === 0) {
+    console.error('[Demo Agent] No providers configured. Set at least one of: ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY');
     process.exit(1);
   }
 
-  console.log(`\n🤖 Mafia AI Demo Agent (test client)`);
-  console.log(`   Purpose: spawns Claude-powered agents to fill a game for local testing`);
+  const totalAgents = activeSpecs.reduce((s, sp) => s + sp.count, 0);
+  console.log(`\n🤖 Mafia AI Demo Agent`);
   console.log(`   Game Server: ${agentConfig.gameServerUrl}`);
-  console.log(`   Spawning ${agentConfig.agentCount} agents`);
-  console.log(`   Model: ${agentConfig.model}`);
-  console.log(`   Note: external agents should use apps/mcp-adapter or the REST API directly\n`);
+  for (const sp of activeSpecs) {
+    console.log(`   ${sp.provider.padEnd(8)} → ${sp.count} agents (${sp.model})`);
+  }
+  console.log(`   Total: ${totalAgents} agents\n`);
 
   const loops: AgentLoop[] = [];
+  let delay = 0;
 
-  // Stagger agent registration by 500ms each to avoid overwhelming the server
-  for (let i = 0; i < agentConfig.agentCount; i++) {
-    await sleep(500 * i);
+  for (const spec of activeSpecs) {
+    const names = AGENT_NAMES[spec.provider];
+    for (let i = 0; i < spec.count; i++) {
+      await sleep(delay);
+      delay = 500; // stagger subsequent registrations
 
-    const name = AGENT_NAMES[i % AGENT_NAMES.length]!;
-    const personality = PERSONALITIES[i % PERSONALITIES.length]!;
+      const name = names[i % names.length]!;
+      const personality = PERSONALITIES[loops.length % PERSONALITIES.length]!;
 
-    try {
-      const client = await AgentClient.register(name, agentConfig.model, personality);
-      const loop = new AgentLoop(client, personality);
-      loops.push(loop);
+      try {
+        const client = await AgentClient.register(name, spec.model, personality);
+        const loop = new AgentLoop(client, personality, spec.makeLLM());
+        loops.push(loop);
 
-      // Start agent loop (non-blocking)
-      loop.start().catch((err) => {
-        console.error(`[${name}] Agent loop error:`, err);
-      });
-    } catch (err) {
-      console.error(`Failed to register agent ${name}:`, err);
+        loop.start().catch((err) => {
+          console.error(`[${name}] Agent loop error:`, err);
+        });
+      } catch (err) {
+        console.error(`Failed to register agent ${name}:`, err);
+      }
     }
   }
 
-  console.log(`\n[AI Agent] All agents started. Press Ctrl+C to stop.\n`);
+  console.log(`\n[Demo Agent] All agents started. Press Ctrl+C to stop.\n`);
 
-  // Graceful shutdown
   process.on('SIGINT', () => {
-    console.log('\n[AI Agent] Stopping...');
+    console.log('\n[Demo Agent] Stopping...');
     loops.forEach((l) => l.stop());
     process.exit(0);
   });

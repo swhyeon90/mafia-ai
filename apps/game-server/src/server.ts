@@ -5,6 +5,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { config } from './config';
 import { agentRoutes } from './routes/agents';
 import { gameRoutes } from './routes/games';
+import { mcpRoutes } from './mcp/mcp-route';
 import { wsManager } from './ws/ws-manager';
 import { gameService } from './services/game-service';
 
@@ -28,6 +29,7 @@ export async function buildServer() {
   // ─── Routes ─────────────────────────────────────────────────────────────────
   await fastify.register(agentRoutes);
   await fastify.register(gameRoutes);
+  await fastify.register(mcpRoutes);
 
   // Health check
   fastify.get('/health', async () => ({ ok: true, timestamp: Date.now() }));
